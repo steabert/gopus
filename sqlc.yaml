@@ -1,0 +1,9 @@
+version: "2"
+sql:
+  - engine: "sqlite"
+    queries: "rds/query.sql"
+    schema: "rds/schema.sql"
+    gen:
+      go:
+        package: "rds"
+        out: "rds"

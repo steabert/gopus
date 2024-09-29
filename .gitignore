@@ -8,6 +8,7 @@
 *.so
 *.dylib
 gopus
+gopus.db
 
 # Test binary, built with `go test -c`
 *.test
