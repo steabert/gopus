@@ -10,18 +10,22 @@ import (
 	_ "github.com/ncruces/go-sqlite3/embed"
 )
 
+var Database *Queries
+
 //go:embed schema.sql
 var ddl string
 
-func Load() (*Queries, error) {
+func init() {
 	ctx := context.Background()
+
 	db, err := sql.Open("sqlite3", "file:gopus.db")
 	if err != nil {
-		return nil, fmt.Errorf("while opening database: %v", err)
+		panic(fmt.Errorf("unable to open database, %v", err))
 	}
+
 	if _, err := db.ExecContext(ctx, ddl); err != nil {
-		return nil, fmt.Errorf("while creating db tables: %v", err)
+		panic(fmt.Errorf("failed to access database, %v", err))
 	}
-	queries := New(db)
-	return queries, nil
+
+	Database = New(db)
 }

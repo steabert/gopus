@@ -4,12 +4,8 @@
 
 package rds
 
-import (
-	"database/sql"
-)
-
 type Song struct {
 	ID    interface{}
 	Title string
-	Path  sql.NullString
+	Path  *string
 }

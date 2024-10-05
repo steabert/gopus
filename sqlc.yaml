@@ -5,5 +5,6 @@ sql:
     schema: "rds/schema.sql"
     gen:
       go:
+        emit_pointers_for_null_types: true
         package: "rds"
         out: "rds"

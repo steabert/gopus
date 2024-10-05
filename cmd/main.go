@@ -1,15 +1,13 @@
 package main
 
 import (
-	"context"
-	"database/sql"
 	_ "embed"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 
-	"github.com/steabert/gopus/rds"
+	"github.com/steabert/gopus/worker"
 )
 
 func usage() {
@@ -27,11 +25,6 @@ Usage:
 }
 
 func main() {
-	queries, err := rds.Load()
-	if err != nil {
-		panic(fmt.Errorf("while opening database: %v", err))
-	}
-
 	// Expecting at least 1 subcommand (add or find)
 	if len(os.Args) < 2 {
 		usage()
@@ -46,8 +39,8 @@ func main() {
 			usage()
 			os.Exit(1)
 		}
-		path := cmdArgs[0]
-		add(queries, path)
+		dir := cmdArgs[0]
+		scanDirectory(dir)
 	case "find":
 		// findCmd := flag.NewFlagSet("find", flag.ExitOnError)
 		// err := findCmd.Parse(flag.Args())
@@ -62,22 +55,16 @@ func main() {
 	}
 }
 
-func add(queries *rds.Queries, path string) {
-	fmt.Printf("scanning %s for .opus songs to add to the database", path)
+func scanDirectory(dir string) {
+	fmt.Printf("scanning directory %s for .opus songs to add to the database", dir)
 
-	ctx := context.Background()
-	filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
-		song, err := queries.AddSong(ctx, rds.AddSongParams{
-			Title: "",
-			Path:  sql.NullString{},
-		})
-		if err == nil {
-			fmt.Printf("added %s\n", song.Title)
+	filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		err = worker.InsertSongFromPath(path)
+		if err != nil {
+			fmt.Printf("[ERROR] failed to add %s, %v", path, err)
+		} else {
+			fmt.Printf("[OK] added %p", path)
 		}
 		return err
 	})
 }
-
-// func find(db *sql.DB, title string) {
-// 	fmt.Println("find")
-// }

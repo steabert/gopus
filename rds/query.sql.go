@@ -7,23 +7,20 @@ package rds
 
 import (
 	"context"
-	"database/sql"
 )
 
-const addSong = `-- name: AddSong :one
-INSERT INTO songs ( title, path ) VALUES ( ?, ? ) RETURNING id, title, path
+const addSong = `-- name: AddSong :exec
+INSERT INTO songs ( title, path ) VALUES ( ?, ? )
 `
 
 type AddSongParams struct {
 	Title string
-	Path  sql.NullString
+	Path  *string
 }
 
-func (q *Queries) AddSong(ctx context.Context, arg AddSongParams) (Song, error) {
-	row := q.db.QueryRowContext(ctx, addSong, arg.Title, arg.Path)
-	var i Song
-	err := row.Scan(&i.ID, &i.Title, &i.Path)
-	return i, err
+func (q *Queries) AddSong(ctx context.Context, arg AddSongParams) error {
+	_, err := q.db.ExecContext(ctx, addSong, arg.Title, arg.Path)
+	return err
 }
 
 const getTitle = `-- name: GetTitle :many
@@ -32,7 +29,7 @@ SELECT title, path FROM songs WHERE id = ?
 
 type GetTitleRow struct {
 	Title string
-	Path  sql.NullString
+	Path  *string
 }
 
 func (q *Queries) GetTitle(ctx context.Context, id interface{}) ([]GetTitleRow, error) {
@@ -64,7 +61,7 @@ SELECT title, path FROM songs WHERE title LIKE ? ORDER BY title
 
 type ListTitlesRow struct {
 	Title string
-	Path  sql.NullString
+	Path  *string
 }
 
 func (q *Queries) ListTitles(ctx context.Context, title string) ([]ListTitlesRow, error) {
