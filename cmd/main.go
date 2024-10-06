@@ -56,14 +56,14 @@ func main() {
 }
 
 func scanDirectory(dir string) {
-	fmt.Printf("scanning directory %s for .opus songs to add to the database", dir)
+	fmt.Printf("scanning %s for Opus files to add to the database...\n", dir)
 
 	filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		err = worker.InsertSongFromPath(path)
 		if err != nil {
-			fmt.Printf("[ERROR] failed to add %s, %v", path, err)
+			fmt.Printf("[ERROR] failed to add %s, %v\n", path, err)
 		} else {
-			fmt.Printf("[OK] added %p", path)
+			fmt.Printf("[OK] added %s\n", path)
 		}
 		return err
 	})

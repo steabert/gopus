@@ -11,13 +11,13 @@ import (
 // InsertSongFromPath adds a song from an .opus file to the database.
 func InsertSongFromPath(path string) error {
 	ctx := context.Background()
-	tags, err := opus.ReadTags(path)
+	info, err := opus.ParseInfo(path)
 	if err != nil {
-		return fmt.Errorf("failed to read Opus tags, %v", err)
+		return fmt.Errorf("failed to read Opus info, %v", err)
 	}
 
 	err = rds.Database.AddSong(ctx, rds.AddSongParams{
-		Title: tags.Title,
+		Title: info.Title,
 		Path:  &path,
 	})
 

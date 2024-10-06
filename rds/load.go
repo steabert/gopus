@@ -24,7 +24,7 @@ func init() {
 	}
 
 	if _, err := db.ExecContext(ctx, ddl); err != nil {
-		panic(fmt.Errorf("failed to access database, %v", err))
+		// panic(fmt.Errorf("failed to access database, %v", err))
 	}
 
 	Database = New(db)
