@@ -32,7 +32,7 @@ type GetTitleRow struct {
 	Path  *string
 }
 
-func (q *Queries) GetTitle(ctx context.Context, id interface{}) ([]GetTitleRow, error) {
+func (q *Queries) GetTitle(ctx context.Context, id int64) ([]GetTitleRow, error) {
 	rows, err := q.db.QueryContext(ctx, getTitle, id)
 	if err != nil {
 		return nil, err

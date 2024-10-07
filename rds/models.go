@@ -5,7 +5,7 @@
 package rds
 
 type Song struct {
-	ID    interface{}
+	ID    int64
 	Title string
 	Path  *string
 }
