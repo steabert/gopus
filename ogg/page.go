@@ -1,12 +1,10 @@
 package ogg
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/binary"
 	"errors"
 	"io"
-	"os"
 )
 
 const (
@@ -27,32 +25,9 @@ type OggPage struct {
 }
 
 // ParsePage parses a single page of an OGG stream.
-//
-//	0                   1                   2                   3
-//	0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1| Byte
-//
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// | capture_pattern: Magic number for page start "OggS"           | 0-3
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// | version       | header_type   | granule_position              | 4-7
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |                                                               | 8-11
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |                               | bitstream_serial_number       | 12-15
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |                               | page_sequence_number          | 16-19
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |                               | CRC_checksum                  | 20-23
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |                               |page_segments  | segment_table | 24-27
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// | ...                                                           | 28-
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-func ParsePage(f *os.File) (OggPage, error) {
+func ParsePage(r io.Reader) (OggPage, error) {
 	var err error
 	var page OggPage
-
-	r := bufio.NewReader(f)
 
 	ogg_page_header := make([]byte, ogg_page_header_size)
 	_, err = io.ReadFull(r, ogg_page_header)
@@ -60,6 +35,26 @@ func ParsePage(f *os.File) (OggPage, error) {
 		return page, err
 	}
 
+	//	0                   1                   2                   3
+	//	0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1| Byte
+	//
+	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	// | capture_pattern: Magic number for page start "OggS"           | 0-3
+	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	// | version       | header_type   | granule_position              | 4-7
+	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	// |                                                               | 8-11
+	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	// |                               | bitstream_serial_number       | 12-15
+	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	// |                               | page_sequence_number          | 16-19
+	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	// |                               | CRC_checksum                  | 20-23
+	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	// |                               |page_segments  | segment_table | 24-27
+	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	// | ...                                                           | 28-
+	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	capture_pattern := ogg_page_header[0 : 0+4]
 	version := ogg_page_header[4]
 	header_type := ogg_page_header[5]
@@ -90,6 +85,8 @@ func ParsePage(f *os.File) (OggPage, error) {
 	if err != nil {
 		return page, err
 	}
+
+	page.Complete = segment_table[len(segment_table)-1] < 255
 
 	page_size := 0
 	for _, lacing_value := range segment_table {

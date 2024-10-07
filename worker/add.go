@@ -16,8 +16,10 @@ func InsertSongFromPath(path string) error {
 		return fmt.Errorf("failed to read Opus info, %v", err)
 	}
 
+	fmt.Printf("info: %+v\n", info)
+
 	err = rds.Database.AddSong(ctx, rds.AddSongParams{
-		Title: info.Title,
+		Title: info.Comments["TITLE"],
 		Path:  &path,
 	})
 
