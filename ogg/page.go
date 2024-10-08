@@ -1,18 +1,18 @@
 package ogg
 
 import (
-	"bytes"
-	"encoding/binary"
 	"errors"
 	"io"
+
+	"github.com/steabert/gopus/binary"
 )
 
 const (
-	ogg_page_header_size = 27
-	ogg_capture_pattern  = "OggS"
+	ogg_page_header_size      = 27
+	ogg_page_header_magic_sig = 0x5367674f // "OggS"
 )
 
-type OggPage struct {
+type Page struct {
 	Body            []byte
 	GranulePosition int64
 	SerialNumber    uint32
@@ -25,15 +25,10 @@ type OggPage struct {
 }
 
 // ParsePage parses a single page of an OGG stream.
-func ParsePage(r io.Reader) (OggPage, error) {
+func ParsePage(r io.Reader, page *Page) error {
 	var err error
-	var page OggPage
 
-	ogg_page_header := make([]byte, ogg_page_header_size)
-	_, err = io.ReadFull(r, ogg_page_header)
-	if err != nil {
-		return page, err
-	}
+	br := binary.NewReader(r)
 
 	//	0                   1                   2                   3
 	//	0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1| Byte
@@ -55,21 +50,25 @@ func ParsePage(r io.Reader) (OggPage, error) {
 	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	// | ...                                                           | 28-
 	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	capture_pattern := ogg_page_header[0 : 0+4]
-	version := ogg_page_header[4]
-	header_type := ogg_page_header[5]
-	granule_position := binary.LittleEndian.Uint64(ogg_page_header[6 : 6+8])
-	serial_number := binary.LittleEndian.Uint32(ogg_page_header[14 : 14+4])
-	sequence_number := binary.LittleEndian.Uint32(ogg_page_header[18 : 18+4])
-	crc_checksum := binary.LittleEndian.Uint32(ogg_page_header[22 : 22+4])
-	page_segments := ogg_page_header[26]
+	capture_pattern := br.ReadUint32()
+	version := br.ReadUint8()
+	header_type := br.ReadUint8()
+	granule_position := br.ReadUint64()
+	serial_number := br.ReadUint32()
+	sequence_number := br.ReadUint32()
+	crc_checksum := br.ReadUint32()
+	page_segments := br.ReadUint8()
 
-	if !bytes.Equal(capture_pattern, []byte(ogg_capture_pattern)) {
-		return page, errors.New("expected magic string OggS")
+	if br.Err() != nil {
+		return br.Err()
+	}
+
+	if capture_pattern != ogg_page_header_magic_sig {
+		return errors.New("expected magic string OggS")
 	}
 
 	if version != 0 {
-		return page, errors.New("expected version to be 0")
+		return errors.New("expected version to be 0")
 	}
 
 	page.Continued = (header_type & 0x01) == 0x01
@@ -83,7 +82,7 @@ func ParsePage(r io.Reader) (OggPage, error) {
 	segment_table := make([]byte, page_segments)
 	_, err = io.ReadFull(r, segment_table)
 	if err != nil {
-		return page, err
+		return err
 	}
 
 	page.Complete = segment_table[len(segment_table)-1] < 255
@@ -96,8 +95,8 @@ func ParsePage(r io.Reader) (OggPage, error) {
 	page.Body = make([]byte, page_size)
 	_, err = io.ReadFull(r, page.Body)
 	if err != nil {
-		return page, err
+		return err
 	}
 
-	return page, nil
+	return nil
 }

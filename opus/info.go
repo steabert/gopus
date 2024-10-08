@@ -3,13 +3,13 @@ package opus
 import (
 	"bufio"
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 
+	"github.com/steabert/gopus/binary"
 	"github.com/steabert/gopus/ogg"
 )
 
@@ -25,7 +25,7 @@ type OpusInfo struct {
 	Comments      map[string]string
 	SampleRate    uint32
 	PreSkip       uint16
-	OutputGain    int16
+	OutputGain    float64
 	Channels      uint8
 	MappingFamily uint8
 }
@@ -44,7 +44,8 @@ func ParseInfo(path string) (OpusInfo, error) {
 	// Parse the identification header. This is a single-page header
 	// at the "Beginning Of Stream" that has to be complete.
 
-	page, err := ogg.ParsePage(r)
+	var page ogg.Page
+	err = ogg.ParsePage(r, &page)
 	if err != nil {
 		return info, fmt.Errorf("invalid OGG stream, %v", err)
 	}
@@ -61,21 +62,22 @@ func ParseInfo(path string) (OpusInfo, error) {
 
 	// Parse the comment header. This can span multiple pages.
 
-	var commentHeader []io.Reader
+	var commentHeaderPages []io.Reader
 	for {
-		page, err := ogg.ParsePage(r)
+		var page ogg.Page
+		err := ogg.ParsePage(r, &page)
 		if err != nil {
 			return info, fmt.Errorf("invalid OGG stream, %v", err)
 		}
 
-		commentHeader = append(commentHeader, bytes.NewReader(page.Body))
+		commentHeaderPages = append(commentHeaderPages, bytes.NewReader(page.Body))
 
 		if page.Complete {
 			break
 		}
 	}
 
-	err = parseCommentHeader(io.MultiReader(commentHeader...), &info)
+	err = parseCommentHeader(io.MultiReader(commentHeaderPages...), &info)
 	if err != nil {
 		return info, fmt.Errorf("invalid identification header, %v", err)
 	}
@@ -88,6 +90,8 @@ func ParseInfo(path string) (OpusInfo, error) {
 // the mininum size of a header, otherwise the parser will
 // panic.
 func parseIDHeader(r io.Reader, info *OpusInfo) (err error) {
+	br := binary.NewReader(r)
+
 	//	0                   1                   2                   3
 	//	0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 	//
@@ -106,13 +110,17 @@ func parseIDHeader(r io.Reader, info *OpusInfo) (err error) {
 	// :               Optional Channel Mapping Table...               :
 	// |                                                               |
 	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	capture_pattern := mustReadUint64(r)
-	version := mustReadUint8(r)
-	channel_count := mustReadUint8(r)
-	pre_skip := mustReadUint16(r)
-	sample_rate := mustReadUint32(r)
-	output_gain := mustReadUint16(r)
-	mapping_family := mustReadUint8(r)
+	capture_pattern := br.ReadUint64()
+	version := br.ReadUint8()
+	channel_count := br.ReadUint8()
+	pre_skip := br.ReadUint16()
+	sample_rate := br.ReadUint32()
+	output_gain := br.ReadUint16()
+	mapping_family := br.ReadUint8()
+
+	if br.Err() != nil {
+		return br.Err()
+	}
 
 	if capture_pattern != opus_id_header_magic_sig {
 		return errors.New("expected magic signature 'OpusHead'")
@@ -125,13 +133,15 @@ func parseIDHeader(r io.Reader, info *OpusInfo) (err error) {
 	info.Channels = channel_count
 	info.PreSkip = pre_skip
 	info.SampleRate = sample_rate
-	info.OutputGain = int16(output_gain)
+	info.OutputGain = float64(int16(output_gain)) / float64(256.0)
 	info.MappingFamily = mapping_family
 
 	return nil
 }
 
 func parseCommentHeader(r io.Reader, info *OpusInfo) error {
+	br := binary.NewReader(r)
+
 	//  0                   1                   2                   3
 	//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -157,13 +167,20 @@ func parseCommentHeader(r io.Reader, info *OpusInfo) error {
 	// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	// :                                                               :
 
-	capture_pattern := mustReadUint64(r)
+	capture_pattern := br.ReadUint64()
+	if br.Err() != nil {
+		return br.Err()
+	}
 
 	if capture_pattern != opus_comment_header_magic_sig {
 		return errors.New("expected magic signature 'OpusHead'")
 	}
 
-	vendor_string_length := mustReadUint32(r)
+	vendor_string_length := br.ReadUint32()
+	if br.Err() != nil {
+		return br.Err()
+	}
+
 	fmt.Println("vendor", vendor_string_length)
 	vendor_string := make([]byte, vendor_string_length)
 	_, err := io.ReadFull(r, vendor_string)
@@ -171,10 +188,18 @@ func parseCommentHeader(r io.Reader, info *OpusInfo) error {
 		return err
 	}
 
-	user_comment_list_length := mustReadUint32(r)
+	user_comment_list_length := br.ReadUint32()
+	if br.Err() != nil {
+		return br.Err()
+	}
+
 	user_comments := make(map[string]string, user_comment_list_length)
 	for range user_comment_list_length {
-		user_comment_string_length := mustReadUint32(r)
+		user_comment_string_length := br.ReadUint32()
+		if br.Err() != nil {
+			return br.Err()
+		}
+
 		user_comment_string := make([]byte, user_comment_string_length)
 		_, err := io.ReadFull(r, user_comment_string)
 		if err != nil {
@@ -192,40 +217,4 @@ func parseCommentHeader(r io.Reader, info *OpusInfo) error {
 	info.Comments = user_comments
 
 	return nil
-}
-
-func mustReadUint8(r io.Reader) uint8 {
-	b := [1]byte{}
-	_, err := io.ReadFull(r, b[:])
-	if err != nil {
-		panic(err)
-	}
-	return uint8(b[0])
-}
-
-func mustReadUint16(r io.Reader) uint16 {
-	b := [2]byte{}
-	_, err := io.ReadFull(r, b[:])
-	if err != nil {
-		panic(err)
-	}
-	return binary.LittleEndian.Uint16(b[:])
-}
-
-func mustReadUint32(r io.Reader) uint32 {
-	b := [4]byte{}
-	_, err := io.ReadFull(r, b[:])
-	if err != nil {
-		panic(err)
-	}
-	return binary.LittleEndian.Uint32(b[:])
-}
-
-func mustReadUint64(r io.Reader) uint64 {
-	b := [8]byte{}
-	_, err := io.ReadFull(r, b[:])
-	if err != nil {
-		panic(err)
-	}
-	return binary.LittleEndian.Uint64(b[:])
 }
