@@ -1,11 +1,8 @@
 package main
 
 import (
-	_ "embed"
 	"fmt"
-	"io/fs"
 	"os"
-	"path/filepath"
 
 	"github.com/steabert/gopus/rds"
 	"github.com/steabert/gopus/worker"
@@ -48,41 +45,16 @@ func main() {
 		}
 
 		dir := cmdArgs[0]
-		err = scanDirectory(dir)
+		err = worker.ScanDirectory(dir)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to scan directory, %v", err)
 			os.Exit(1)
 		}
 	case "find":
-		// findCmd := flag.NewFlagSet("find", flag.ExitOnError)
-		// err := findCmd.Parse(flag.Args())
-		// if err != nil {
-		// 	findCmd.Usage()
-		// 	os.Exit(1)
-		// }
-		// find(db, filter)
+		// Open database in "ro" mode and search on artist/album/song
+		// based on flag(s) given and return result as a list of paths.
 	default:
 		usage()
 		os.Exit(1)
 	}
-}
-
-func scanDirectory(dir string) error {
-	fmt.Printf("scanning %s for Opus files to add to the database...\n", dir)
-
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() {
-			return nil
-		}
-
-		err = worker.InsertSongFromPath(path)
-		if err != nil {
-			fmt.Printf("[ERROR] failed to add %s, %v\n", path, err)
-		} else {
-			fmt.Printf("[OK] added %s\n", path)
-		}
-		return nil
-	})
-
-	return err
 }
