@@ -54,7 +54,6 @@ func ParseInfo(path string) (OpusInfo, error) {
 		return info, fmt.Errorf("invalid identification header page, %v", err)
 	}
 
-	fmt.Printf("%d, %+v\n", len(page.Body), page.Body)
 	err = parseIDHeader(bytes.NewReader(page.Body), &info)
 	if err != nil {
 		return info, fmt.Errorf("invalid identification header, %v", err)
@@ -181,7 +180,6 @@ func parseCommentHeader(r io.Reader, info *OpusInfo) error {
 		return br.Err()
 	}
 
-	fmt.Println("vendor", vendor_string_length)
 	vendor_string := make([]byte, vendor_string_length)
 	_, err := io.ReadFull(r, vendor_string)
 	if err != nil {
@@ -213,7 +211,6 @@ func parseCommentHeader(r io.Reader, info *OpusInfo) error {
 	}
 
 	info.Vendor = string(vendor_string)
-	fmt.Println(user_comments)
 	info.Comments = user_comments
 
 	return nil

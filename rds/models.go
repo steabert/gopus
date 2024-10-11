@@ -4,8 +4,23 @@
 
 package rds
 
-type Song struct {
-	ID    int64
+type Album struct {
 	Title string
-	Path  *string
+}
+
+type Artist struct {
+	Name string
+}
+
+type Recording struct {
+	Path       string
+	Song       string
+	Artist     string
+	Album      string
+	Cddb       *string
+	Constraint interface{}
+}
+
+type Song struct {
+	Title string
 }

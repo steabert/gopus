@@ -59,6 +59,10 @@ func scanDirectory(dir string) {
 	fmt.Printf("scanning %s for Opus files to add to the database...\n", dir)
 
 	filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+
 		err = worker.InsertSongFromPath(path)
 		if err != nil {
 			fmt.Printf("[ERROR] failed to add %s, %v\n", path, err)

@@ -16,11 +16,16 @@ func InsertSongFromPath(path string) error {
 		return fmt.Errorf("failed to read Opus info, %v", err)
 	}
 
-	fmt.Printf("info: %+v\n", info)
+	// fmt.Printf("info: %+v\n", info)
 
-	err = rds.Database.AddSong(ctx, rds.AddSongParams{
-		Title: info.Comments["TITLE"],
-		Path:  &path,
+	err = rds.Database.AddSong(ctx, info.Comments["TITLE"])
+	err = rds.Database.AddAlbum(ctx, info.Comments["ALBUM"])
+	err = rds.Database.AddArtist(ctx, info.Comments["ARTIST"])
+	err = rds.Database.AddRecording(ctx, rds.AddRecordingParams{
+		Path:   path,
+		Song:   info.Comments["TITLE"],
+		Artist: info.Comments["ARTIST"],
+		Album:  info.Comments["ALBUM"],
 	})
 
 	if err != nil {
