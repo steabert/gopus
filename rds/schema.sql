@@ -1,25 +1,25 @@
-CREATE TABLE song (
+CREATE TABLE IF NOT EXISTS song (
     title  TEXT NOT NULL,
 
     CONSTRAINT PK 
         PRIMARY KEY ( title )
 );
 
-CREATE TABLE artist (
+CREATE TABLE IF NOT EXISTS artist (
     name  TEXT NOT NULL,
 
     CONSTRAINT PK 
         PRIMARY KEY ( name )
 );
 
-CREATE TABLE album (
+CREATE TABLE IF NOT EXISTS album (
     title  TEXT NOT NULL,
 
     CONSTRAINT PK 
         PRIMARY KEY ( title )
 );
 
-CREATE TABLE recording (
+CREATE TABLE IF NOT EXISTS recording (
     path   TEXT NOT NULL,
     song   TEXT NOT NULL,
     artist TEXT NOT NULL,

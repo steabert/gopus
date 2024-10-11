@@ -15,17 +15,25 @@ var Database *Queries
 //go:embed schema.sql
 var ddl string
 
-func init() {
+func Open(mode string) error {
+	switch mode {
+	case "ro", "rw":
+	default:
+		return fmt.Errorf("invalid mode: %s, use one of ro, rw\n", mode)
+	}
+
 	ctx := context.Background()
 
-	db, err := sql.Open("sqlite3", "file:gopus.db")
+	dbConnection := fmt.Sprintf("file:gopus.db?mode=%s", mode)
+	db, err := sql.Open("sqlite3", dbConnection)
 	if err != nil {
 		panic(fmt.Errorf("unable to open database, %v", err))
 	}
 
 	if _, err := db.ExecContext(ctx, ddl); err != nil {
-		panic(fmt.Errorf("failed to access database, %v", err))
+		return fmt.Errorf("failed to access database, %v", err)
 	}
 
 	Database = New(db)
+	return nil
 }

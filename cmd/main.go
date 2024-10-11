@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/steabert/gopus/rds"
 	"github.com/steabert/gopus/worker"
 )
 
@@ -39,8 +40,19 @@ func main() {
 			usage()
 			os.Exit(1)
 		}
+
+		err := rds.Open("rw")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to open database, %v", err)
+			os.Exit(1)
+		}
+
 		dir := cmdArgs[0]
-		scanDirectory(dir)
+		err = scanDirectory(dir)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to scan directory, %v", err)
+			os.Exit(1)
+		}
 	case "find":
 		// findCmd := flag.NewFlagSet("find", flag.ExitOnError)
 		// err := findCmd.Parse(flag.Args())
@@ -55,10 +67,10 @@ func main() {
 	}
 }
 
-func scanDirectory(dir string) {
+func scanDirectory(dir string) error {
 	fmt.Printf("scanning %s for Opus files to add to the database...\n", dir)
 
-	filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return nil
 		}
@@ -69,6 +81,8 @@ func scanDirectory(dir string) {
 		} else {
 			fmt.Printf("[OK] added %s\n", path)
 		}
-		return err
+		return nil
 	})
+
+	return err
 }
