@@ -10,11 +10,16 @@ import (
 )
 
 const addAlbum = `-- name: AddAlbum :exec
-INSERT INTO album ( title ) VALUES ( ? )
+INSERT INTO album ( title, artist ) VALUES ( ?, ? )
 `
 
-func (q *Queries) AddAlbum(ctx context.Context, title string) error {
-	_, err := q.db.ExecContext(ctx, addAlbum, title)
+type AddAlbumParams struct {
+	Title  string
+	Artist string
+}
+
+func (q *Queries) AddAlbum(ctx context.Context, arg AddAlbumParams) error {
+	_, err := q.db.ExecContext(ctx, addAlbum, arg.Title, arg.Artist)
 	return err
 }
 
@@ -28,7 +33,10 @@ func (q *Queries) AddArtist(ctx context.Context, name string) error {
 }
 
 const addRecording = `-- name: AddRecording :exec
-INSERT INTO recording ( path, song, artist, album ) VALUES ( ?, ?, ?, ?)
+INSERT INTO recording
+  ( path, song, artist, album, cddb, track ) 
+VALUES
+  ( ?, ?, ?, ?, ?, ?)
 `
 
 type AddRecordingParams struct {
@@ -36,6 +44,8 @@ type AddRecordingParams struct {
 	Song   string
 	Artist string
 	Album  string
+	Cddb   string
+	Track  int64
 }
 
 func (q *Queries) AddRecording(ctx context.Context, arg AddRecordingParams) error {
@@ -44,6 +54,8 @@ func (q *Queries) AddRecording(ctx context.Context, arg AddRecordingParams) erro
 		arg.Song,
 		arg.Artist,
 		arg.Album,
+		arg.Cddb,
+		arg.Track,
 	)
 	return err
 }
@@ -57,31 +69,109 @@ func (q *Queries) AddSong(ctx context.Context, title string) error {
 	return err
 }
 
-const listSongs = `-- name: ListSongs :many
-SELECT song, artist, album, path FROM recording WHERE song LIKE ? ORDER BY song
+const listRecordingsMatchingAlbum = `-- name: ListRecordingsMatchingAlbum :many
+SELECT path, song, album, track FROM recording WHERE album LIKE ? ORDER BY album, track
 `
 
-type ListSongsRow struct {
-	Song   string
-	Artist string
-	Album  string
-	Path   string
+type ListRecordingsMatchingAlbumRow struct {
+	Path  string
+	Song  string
+	Album string
+	Track int64
 }
 
-func (q *Queries) ListSongs(ctx context.Context, song string) ([]ListSongsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listSongs, song)
+func (q *Queries) ListRecordingsMatchingAlbum(ctx context.Context, album string) ([]ListRecordingsMatchingAlbumRow, error) {
+	rows, err := q.db.QueryContext(ctx, listRecordingsMatchingAlbum, album)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListSongsRow
+	var items []ListRecordingsMatchingAlbumRow
 	for rows.Next() {
-		var i ListSongsRow
+		var i ListRecordingsMatchingAlbumRow
 		if err := rows.Scan(
-			&i.Song,
-			&i.Artist,
-			&i.Album,
 			&i.Path,
+			&i.Song,
+			&i.Album,
+			&i.Track,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRecordingsMatchingArtist = `-- name: ListRecordingsMatchingArtist :many
+SELECT path, song, album, track FROM recording WHERE artist LIKE ? ORDER BY album, track
+`
+
+type ListRecordingsMatchingArtistRow struct {
+	Path  string
+	Song  string
+	Album string
+	Track int64
+}
+
+func (q *Queries) ListRecordingsMatchingArtist(ctx context.Context, artist string) ([]ListRecordingsMatchingArtistRow, error) {
+	rows, err := q.db.QueryContext(ctx, listRecordingsMatchingArtist, artist)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRecordingsMatchingArtistRow
+	for rows.Next() {
+		var i ListRecordingsMatchingArtistRow
+		if err := rows.Scan(
+			&i.Path,
+			&i.Song,
+			&i.Album,
+			&i.Track,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRecordingsMatchingSong = `-- name: ListRecordingsMatchingSong :many
+SELECT path, song, album, track FROM recording WHERE song LIKE ? ORDER BY album, track
+`
+
+type ListRecordingsMatchingSongRow struct {
+	Path  string
+	Song  string
+	Album string
+	Track int64
+}
+
+func (q *Queries) ListRecordingsMatchingSong(ctx context.Context, song string) ([]ListRecordingsMatchingSongRow, error) {
+	rows, err := q.db.QueryContext(ctx, listRecordingsMatchingSong, song)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRecordingsMatchingSongRow
+	for rows.Next() {
+		var i ListRecordingsMatchingSongRow
+		if err := rows.Scan(
+			&i.Path,
+			&i.Song,
+			&i.Album,
+			&i.Track,
 		); err != nil {
 			return nil, err
 		}

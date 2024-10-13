@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/steabert/gopus/opus"
 	"github.com/steabert/gopus/rds"
@@ -16,16 +17,24 @@ func InsertSongFromPath(path string) error {
 		return fmt.Errorf("failed to read Opus info, %v", err)
 	}
 
-	// fmt.Printf("info: %+v\n", info)
-
 	err = rds.Database.AddSong(ctx, info.Comments["TITLE"])
-	err = rds.Database.AddAlbum(ctx, info.Comments["ALBUM"])
+	err = rds.Database.AddAlbum(ctx, rds.AddAlbumParams{
+		Title:  info.Comments["ALBUM"],
+		Artist: info.Comments["ALBUMARTIST"],
+	})
 	err = rds.Database.AddArtist(ctx, info.Comments["ARTIST"])
+
+	track, err := strconv.Atoi(info.Comments["TRACKNUMBER"])
+	if err != nil {
+		return fmt.Errorf("invalid track number, %v", err)
+	}
 	err = rds.Database.AddRecording(ctx, rds.AddRecordingParams{
 		Path:   path,
 		Song:   info.Comments["TITLE"],
 		Artist: info.Comments["ARTIST"],
 		Album:  info.Comments["ALBUM"],
+		Cddb:   info.Comments["CDDB"],
+		Track:  int64(track),
 	})
 
 	if err != nil {

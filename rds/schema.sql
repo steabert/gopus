@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS artist (
 
 CREATE TABLE IF NOT EXISTS album (
     title  TEXT NOT NULL,
+    artist TEXT NOT NULL,
 
     CONSTRAINT PK 
         PRIMARY KEY ( title )
@@ -24,7 +25,8 @@ CREATE TABLE IF NOT EXISTS recording (
     song   TEXT NOT NULL,
     artist TEXT NOT NULL,
     album  TEXT NOT NULL,
-    cddb   TEXT,
+    cddb   TEXT NOT NULL,
+    track  INTEGER NOT NULL,
 
     CONSTRAINT PK 
         PRIMARY KEY ( path )

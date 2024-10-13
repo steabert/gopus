@@ -1,5 +1,5 @@
 build:
-    go build -o gopus cmd/main.go
+    go build -o gopus cmd/*
 
 run *args:
-    go run cmd/main.go {{ args }}
+    go run cmd/* {{ args }}

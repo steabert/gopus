@@ -1,11 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
-
-	"github.com/steabert/gopus/rds"
-	"github.com/steabert/gopus/worker"
 )
 
 func usage() {
@@ -23,7 +21,8 @@ Usage:
 }
 
 func main() {
-	// Expecting at least 1 subcommand (add or find)
+	var err error
+
 	if len(os.Args) < 2 {
 		usage()
 		os.Exit(1)
@@ -32,29 +31,16 @@ func main() {
 	cmdArgs := os.Args[2:]
 
 	switch cmd {
-	case "add":
-		if len(cmdArgs) != 1 {
-			usage()
-			os.Exit(1)
-		}
-
-		err := rds.Open("rw")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to open database, %v", err)
-			os.Exit(1)
-		}
-
-		dir := cmdArgs[0]
-		err = worker.ScanDirectory(dir)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to scan directory, %v", err)
-			os.Exit(1)
-		}
-	case "find":
-		// Open database in "ro" mode and search on artist/album/song
-		// based on flag(s) given and return result as a list of paths.
+	case "scan":
+		err = scan(cmdArgs)
+	case "list":
+		err = list(cmdArgs)
 	default:
-		usage()
+		err = errors.New("no command given")
+	}
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "program encountered an error: %v\n", err)
 		os.Exit(1)
 	}
 }

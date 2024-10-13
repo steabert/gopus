@@ -17,7 +17,7 @@ var ddl string
 
 func Open(mode string) error {
 	switch mode {
-	case "ro", "rw":
+	case "ro", "rwc":
 	default:
 		return fmt.Errorf("invalid mode: %s, use one of ro, rw\n", mode)
 	}

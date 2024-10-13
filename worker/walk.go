@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-func ScanDirectory(dir string) error {
+func WalkDirInsert(dir string) error {
 	fmt.Printf("scanning %s for Opus files to add to the database...\n", dir)
 
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {

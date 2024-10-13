@@ -5,7 +5,8 @@
 package rds
 
 type Album struct {
-	Title string
+	Title  string
+	Artist string
 }
 
 type Artist struct {
@@ -17,7 +18,8 @@ type Recording struct {
 	Song       string
 	Artist     string
 	Album      string
-	Cddb       *string
+	Cddb       string
+	Track      int64
 	Constraint interface{}
 }
 
